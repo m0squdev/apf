@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -n "$FZFPKG_FUZZY_SEARCH" ]; then
+    fzf_args=""
+else
+    fzf_args="--exact"
+fi
+
 if [ -n "$FZFPKG_FLATPAK_USER" ]; then
     flatpak_level="user"
 else
@@ -8,12 +14,14 @@ fi
 help=$(cat << EOF
 Usage: $0 [FLAGS]
 FLAGS:
+    -f    Enable fuzzy search
     -h    Print this message and exit
     -u    Install Flatpak packages user-wide instead of system-wide. You can also set the FZFPKG_FLATPAK_USER environment variable to achieve the same result
 EOF
 )
-while getopts 'hu' option; do
+while getopts 'fhu' option; do
     case "$option" in
+    	f) fzf_args="" ;;
         h) printf "$help\n"; exit 0 ;;
         u) flatpak_level="user" ;;
         ?) printf "$help\n"; exit 1 ;;
@@ -25,16 +33,18 @@ installed_aur_packages="$(yay -Qq)"
 unformatted_aur_packages="$(yay -Pc)"
 aur_repos="$(echo "$unformatted_aur_packages" | awk '{print tolower($2)}' | sort -u)"
 aur_packages="$(echo "$unformatted_aur_packages" | awk '{print tolower($2) "/" $1}')"
-packages="$aur_packages\n"
+packages="$(echo "$aur_packages" | grep -v "^aur/")\n"
 
 printf " \x1b[32mdone\x1b[37m\nCollecting Flatpak information..."
 installed_flatpak_packages="$(flatpak list --columns=application,origin | awk '{print $2 "/" $1}')"
 flatpak_remotes="$(flatpak remotes --columns=name)"
 flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '{print $2 "/" $1}')"
-packages+="$flatpak_packages\n"
+packages+="$(echo "$flatpak_packages" | tac)\n"
+
+packages+="$(echo "$aur_packages" | grep "^aur/")\n"
 
 printf " \x1b[32mdone\x1b[37m\n"
-choices=$(echo "$packages" | fzf --multi --preview '
+choices=$(echo "$packages" | fzf $fzf_args --multi --no-sort --preview '
 	choice="{1}"
 	choice="${choice:1:-1}"
     repo_or_remote="${choice%%/*}"

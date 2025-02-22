@@ -1,6 +1,7 @@
-# fzfpkg
+# apf
 
-A fuzzy-finder interface for managing official repos, AUR and Flatpak packages on Arch Linux. fzfpkg provides a unified terminal UI for installing, removing and viewing packages from multiple sources.
+An interface based on fzf for managing official repos, AUR and Flatpak packages on Arch Linux. fzfpkg provides a unified terminal UI for installing, removing and viewing packages from multiple sources.
+It is basically a mix of yay (A)UR helper, (P)acman and (F)latpak!
 
 ## Features
 
@@ -32,6 +33,7 @@ Move it to `~/.local/bin` (user-wide installation) or `/usr/bin` (system-wide in
 fzfpkg [FLAGS]
 ```
 
+- `-f`: Enable fuzzy search
 - `-h`: Display help message and exit
 - `-u`: Install Flatpak packages user-wide instead of system-wide. You can also set the `FZFPKG_FLATPAK_USER` environment variable to achieve the same result
 
