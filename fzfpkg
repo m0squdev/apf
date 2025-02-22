@@ -1,0 +1,114 @@
+#!/bin/bash
+
+if [ -n "$FZFPKG_FLATPAK_USER" ]; then
+    flatpak_level="user"
+else
+    flatpak_level="system"
+fi
+help=$(cat << EOF
+Usage: $0 [FLAGS]
+FLAGS:
+    -h    Print this message and exit
+    -u    Install Flatpak packages user-wide instead of system-wide. You can also set the FZFPKG_FLATPAK_USER environment variable to achieve the same result
+EOF
+)
+while getopts 'hu' option; do
+    case "$option" in
+        h) printf "$help\n"; exit 0 ;;
+        u) flatpak_level="user" ;;
+        ?) printf "$help\n"; exit 1 ;;
+    esac
+done
+
+printf "\x1b[1mCollecting official repos and AUR information..."
+installed_aur_packages="$(yay -Qq)"
+unformatted_aur_packages="$(yay -Pc)"
+aur_repos="$(echo "$unformatted_aur_packages" | awk '{print tolower($2)}' | sort -u)"
+aur_packages="$(echo "$unformatted_aur_packages" | awk '{print tolower($2) "/" $1}')"
+packages="$aur_packages\n"
+
+printf " \x1b[32mdone\x1b[37m\nCollecting Flatpak information..."
+installed_flatpak_packages="$(flatpak list --columns=application,origin | awk '{print $2 "/" $1}')"
+flatpak_remotes="$(flatpak remotes --columns=name)"
+flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '{print $2 "/" $1}')"
+packages+="$flatpak_packages\n"
+
+printf " \x1b[32mdone\x1b[37m\n"
+choices=$(echo "$packages" | fzf --multi --preview '
+	choice="{1}"
+	choice="${choice:1:-1}"
+    repo_or_remote="${choice%%/*}"
+    package_or_id="${choice#*/}"
+    case "$repo_or_remote" in
+        aur) repo_or_remote_color="\x1b[34m" ;;
+        core) repo_or_remote_color="\x1b[33m" ;;
+        extra) repo_or_remote_color="\x1b[32m" ;;
+        flathub) repo_or_remote_color="\x1b[35m" ;;
+        flathub-beta) repo_or_remote_color="\x1b[31m" ;;
+        multilib) repo_or_remote_color="\x1b[36m" ;;
+        *) repo_or_remote_color="" ;;
+    esac
+    printf "\x1b[1m$repo_or_remote_color$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id"
+    if echo "'"$aur_repos"'" | grep -q "^$repo_or_remote$"; then
+        if echo "'"$installed_aur_packages"'" | grep -q "^$package_or_id$"; then
+            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m\n    Package already installed. Select to remove.\n\n"
+        else
+            printf "\x1b[0m\n    Package not installed. Select to install.\n\n"
+        fi
+        yay -Si "$package_or_id"
+    elif echo "'"$flatpak_remotes"'" | grep -q "^$repo_or_remote$"; then
+        if echo "'"$installed_flatpak_packages"'" | grep -q "^$repo_or_remote/$package_or_id$"; then
+            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m\n    Package already installed. Select to remove.\n\n"
+        else
+            printf "\x1b[0m\n    Package not installed. Select to install.\n\n"
+        fi
+        flatpak remote-info --system "$repo_or_remote" "$package_or_id"
+    else
+        echo "\x1b[31m-> Error: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
+    fi
+')
+aur_packages_to_remove=""
+aur_packages_to_install=""
+flatpak_packages_to_remove=""
+declare -A flatpak_packages_to_install
+for choice in $choices; do
+    full_package_name="$(echo "${choice}" | cut -d" " -f1)"
+    repo_or_remote="${full_package_name%%/*}"
+    package_or_id="${full_package_name#*/}"
+    if echo "$aur_repos" | grep -q "^$repo_or_remote$"; then
+        if echo "$installed_aur_packages" | grep -q "^$package_or_id$"; then
+            aur_packages_to_remove+="$package_or_id "
+        else
+            aur_packages_to_install+="$package_or_id "
+        fi
+    elif echo "$flatpak_remotes" | grep -q "^$repo_or_remote$"; then
+        if echo "$installed_flatpak_packages" | grep -q "^$repo_or_remote/$package_or_id$"; then
+            flatpak_packages_to_remove+="$package_or_id "
+        else
+            flatpak_packages_to_install["$repo_or_remote"]+="$package_or_id "
+        fi
+    else
+        echo "\x1b[31m-> Error: source of package '$full_package_name' is neither a repo nor a Flatpak remote!\x1b[37m"
+    fi
+done
+if [ -n "$aur_packages_to_remove" ]; then
+    printf "\nAUR packages to \x1b[31mremove\x1b[37m: $aur_packages_to_remove\x1b[0m\n"
+    yay -Rs ${aur_packages_to_remove::-1}
+fi
+if [ -n "$aur_packages_to_install" ]; then
+    printf "\n\x1b[1mAUR packages to install: $aur_packages_to_install\x1b[0m\n"
+    yay -S ${aur_packages_to_install::-1}
+fi
+if [ -n "$flatpak_packages_to_remove" ]; then
+    printf "\n\x1b[1mFlatpak packages to \x1b[31mremove\x1b[37m ($flatpak_level-wide): $flatpak_packages_to_remove\x1b[0m\n"
+    flatpak uninstall --$flatpak_level ${flatpak_packages_to_remove::-1}
+fi
+for remote in "${!flatpak_packages_to_install[@]}"; do
+    if [[ -n "${flatpak_packages_to_install["$remote"]}" ]]; then
+        packages="${flatpak_packages_to_install["$remote"]::-1}"
+        printf "\n\x1b[1mFlatpak packages to install from remote $remote ($flatpak_level-wide): $packages\x1b[0m\n"
+        flatpak install --$flatpak_level "$remote" $packages
+    fi
+done
+
+printf "\x1b[0m"
