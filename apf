@@ -1,12 +1,12 @@
 #!/bin/bash
 
-if [ -n "$FZFPKG_FUZZY_SEARCH" ]; then
+if [ -n "$APF_FUZZY_SEARCH" ]; then
     fzf_args=""
 else
     fzf_args="--exact"
 fi
 
-if [ -n "$FZFPKG_FLATPAK_USER" ]; then
+if [ -n "$APF_FLATPAK_USER" ]; then
     flatpak_level="user"
 else
     flatpak_level="system"
@@ -14,9 +14,9 @@ fi
 help=$(cat << EOF
 Usage: $0 [FLAGS]
 FLAGS:
-    -f    Enable fuzzy search
+    -f    Enable fuzzy search. You can set the APF_FUZZY_SEARCH environment variable to enable it by default
     -h    Print this message and exit
-    -u    Install Flatpak packages user-wide instead of system-wide. You can also set the FZFPKG_FLATPAK_USER environment variable to achieve the same result
+    -u    Install Flatpak packages user-wide instead of system-wide. You can set the APF_FLATPAK_USER environment variable to enable it by default
 EOF
 )
 while getopts 'fhu' option; do
