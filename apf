@@ -33,16 +33,18 @@ installed_aur_packages="$(yay -Qq)"
 unformatted_aur_packages="$(yay -Pc)"
 aur_repos="$(echo "$unformatted_aur_packages" | awk '{print tolower($2)}' | sort -u)"
 aur_packages="$(echo "$unformatted_aur_packages" | awk '{print tolower($2) "/" $1}')"
-packages="$(echo "$aur_packages" | grep -v "^aur/")\n"
+packages="$(echo "$aur_packages" | grep -v "^aur/")"
+packages+=$'\n'
 
 printf " \x1b[32mdone\x1b[37m\nCollecting Flatpak information..."
 installed_flatpak_packages="$(flatpak list --columns=application,origin | awk '{print $2 "/" $1}')"
 flatpak_remotes="$(flatpak remotes --columns=name)"
 flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '{print $2 "/" $1}')"
-packages+="$(echo "$flatpak_packages" | tac)\n"
+packages+="$(echo "$flatpak_packages" | tac)"
+packages+=$'\n'
 
 printf " \x1b[32mdone\x1b[37m\n"
-packages+="$(echo "$aur_packages" | grep "^aur/")\n"
+packages+="$(echo "$aur_packages" | grep "^aur/")"
 
 choices=$(echo "$packages" | fzf $fzf_args --multi --no-sort --preview '
 	choice="{1}"
