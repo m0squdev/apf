@@ -39,7 +39,7 @@ packages+=$'\n'
 printf " \x1b[32mdone\x1b[37m\nCollecting Flatpak information..."
 installed_flatpak_packages="$(flatpak list --columns=application,origin | awk '{print $2 "/" $1}')"
 flatpak_remotes="$(flatpak remotes --columns=name)"
-flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '{print $2 "/" $1}')"
+flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '!seen[$0]++ {print $2 "/" $1}')"  # This line also removes duplicate lines
 packages+="$(echo "$flatpak_packages" | tac)"
 packages+=$'\n'
 
@@ -76,8 +76,33 @@ choices=$(echo "$packages" | fzf $fzf_args --multi --no-sort --preview '
         fi
         flatpak remote-info --system "$repo_or_remote" "$package_or_id"
     else
-        echo "\x1b[31m-> Error: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
+        echo "\x1b[31mError: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
     fi
+    printf "Currently selected packages:"
+    cat "{+f}" | while read -r selected_choice; do
+        selected_full_package_name="${selected_choice%% *}"
+        repo_or_remote="${selected_full_package_name%%/*}"
+        package_or_id="${selected_full_package_name#*/}"
+        case "$repo_or_remote" in
+            aur) repo_or_remote_color="\x1b[34m" ;;
+            core) repo_or_remote_color="\x1b[33m" ;;
+            extra) repo_or_remote_color="\x1b[32m" ;;
+            flathub) repo_or_remote_color="\x1b[35m" ;;
+            flathub-beta) repo_or_remote_color="\x1b[31m" ;;
+            multilib) repo_or_remote_color="\x1b[36m" ;;
+            *) repo_or_remote_color="" ;;
+        esac
+        printf "\n    \x1b[1m$repo_or_remote_color$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id\x1b[0m (to "
+        if { echo "'"$aur_repos"'" | grep -q "^$repo_or_remote$" && echo "'"$installed_aur_packages"'" | grep -q "^$package_or_id$" } || \
+            { echo "'"$flatpak_remotes"'" | grep -q "^$repo_or_remote$" && echo "'"$installed_flatpak_packages"'" | grep -q "^$repo_or_remote/$package_or_id$" }; then
+            printf "\x1b[1m\x1b[31mremove\x1b[37m\x1b[0m"
+        else
+            printf "install"
+        fi
+        printf ")"
+    done || {
+        printf "none"
+    }
 ')
 aur_packages_to_remove=""
 aur_packages_to_install=""
@@ -100,7 +125,7 @@ for choice in $choices; do
             flatpak_packages_to_install["$repo_or_remote"]+="$package_or_id "
         fi
     else
-        echo "\x1b[31m-> Error: source of package '$full_package_name' is neither a repo nor a Flatpak remote!\x1b[37m"
+        echo "\x1b[31mError: source of package '$full_package_name' is neither a repo nor a Flatpak remote!\x1b[37m"
     fi
 done
 if [ -n "$aur_packages_to_remove" ]; then
