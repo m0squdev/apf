@@ -5,7 +5,11 @@ if [ -n "$APF_FUZZY_SEARCH" ]; then
 else
     fzf_args="--exact"
 fi
-
+if [ -n "$APF_REMOVE_DEPENDENCIES" ]; then
+    aur_remove_args="--recursive"
+else
+    aur_remove_args=""
+fi
 if [ -n "$APF_FLATPAK_USER" ]; then
     flatpak_level="user"
 else
@@ -13,16 +17,21 @@ else
 fi
 help=$(cat << EOF
 Usage: $0 [FLAGS]
+
 FLAGS:
-    -f    Enable fuzzy search. You can set the APF_FUZZY_SEARCH environment variable to enable it by default
+    -f    Enable fuzzy search. Corresponding environment variable: APF_FUZZY_SEARCH
     -h    Print this message and exit
-    -u    Install Flatpak packages user-wide instead of system-wide. You can set the APF_FLATPAK_USER environment variable to enable it by default
+    -r    Recursively remove dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
+    -u    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
+
+Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
 EOF
 )
-while getopts 'fhu' option; do
+while getopts 'fhru' option; do
     case "$option" in
     	f) fzf_args="" ;;
         h) printf "$help\n"; exit 0 ;;
+        r) aur_remove_args="--recursive" ;;
         u) flatpak_level="user" ;;
         ?) printf "$help\n"; exit 1 ;;
     esac
@@ -100,6 +109,9 @@ choices=$(echo "$packages" | fzf $fzf_args --multi --no-sort --preview '
             printf "install"
         fi
         printf ")"
+        if echo "'"$aur_repos"'" | grep -q "^$repo_or_remote$" && echo "'"$installed_aur_packages"'" | grep -q "^$package_or_id$" && [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
+            printf " (also remove unused dependencies)"
+        fi
     done || {
         printf "none"
     }
@@ -129,11 +141,15 @@ for choice in $choices; do
     fi
 done
 if [ -n "$aur_packages_to_remove" ]; then
-    printf "\nAUR packages to \x1b[31mremove\x1b[37m: $aur_packages_to_remove\x1b[0m\n"
-    yay -Rs ${aur_packages_to_remove::-1}
+    printf "\nOfficial and AUR packages to \x1b[31mremove\x1b[37m"
+    if [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
+        printf " (also remove unused dependencies)"
+    fi
+    printf ": $aur_packages_to_remove\x1b[0m\n"
+    yay -R $aur_remove_args ${aur_packages_to_remove::-1}
 fi
 if [ -n "$aur_packages_to_install" ]; then
-    printf "\n\x1b[1mAUR packages to install: $aur_packages_to_install\x1b[0m\n"
+    printf "\n\x1b[1mOfficial and AUR packages to install: $aur_packages_to_install\x1b[0m\n"
     yay -S ${aur_packages_to_install::-1}
 fi
 if [ -n "$flatpak_packages_to_remove" ]; then

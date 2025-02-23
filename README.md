@@ -29,12 +29,12 @@ Move it to `~/.local/bin` (user-wide installation) or `/usr/bin` (system-wide in
 
 ## Usage
 
-```bash
-apf [FLAGS]
-```
+Usage: `apf [FLAGS]`
 
-- `-f`: Enable fuzzy search You can set the `APF_FUZZY_SEARCH` environment variable to enable it by default
-- `-h`: Display help message and exit
-- `-u`: Install Flatpak packages user-wide instead of system-wide. You can set the `APF_FLATPAK_USER` environment variable to enable it by default
+FLAGS:
+- `-f`: Enable fuzzy search. Corresponding environment variable: `APF_FUZZY_SEARCH`
+- `-h`: Print this message and exit
+- `-r`: Recursively remove dependencies of AUR packages to remove. Corresponding environment variable: `APF_REMOVE_DEPENDENCIES`
+- `-u`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
 
 Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
