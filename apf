@@ -15,6 +15,18 @@ if [ -n "$APF_FLATPAK_USER" ]; then
 else
     flatpak_level="system"
 fi
+if [ -n "$APF_FLATPAK_USER" ]; then
+    flatpak_level="user"
+else
+    flatpak_level="system"
+fi
+if [ -n "$APF_NO_CONFIRMATION" ]; then
+    aur_install_args="--noconfirm"
+    flatpak_install_args="--assumeyes"
+else
+    aur_install_args=""
+    flatpak_install_args=""
+fi
 help=$(cat << EOF
 Usage: $0 [FLAGS]
 
@@ -23,16 +35,18 @@ FLAGS:
     -h    Print this message and exit
     -r    Recursively remove dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
     -u    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
+    -y    Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
 
 Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
 EOF
 )
-while getopts 'fhru' option; do
+while getopts 'fhruy' option; do
     case "$option" in
     	f) fzf_args="" ;;
         h) printf "$help\n"; exit 0 ;;
         r) aur_remove_args="--recursive" ;;
         u) flatpak_level="user" ;;
+        y) aur_install_args="--noconfirm"; flatpak_install_args="--assumeyes" ;;
         ?) printf "$help\n"; exit 1 ;;
     esac
 done
@@ -150,7 +164,7 @@ if [ -n "$aur_packages_to_remove" ]; then
 fi
 if [ -n "$aur_packages_to_install" ]; then
     printf "\n\x1b[1mOfficial and AUR packages to install: $aur_packages_to_install\x1b[0m\n"
-    yay -S ${aur_packages_to_install::-1}
+    yay -S $aur_install_args ${aur_packages_to_install::-1}
 fi
 if [ -n "$flatpak_packages_to_remove" ]; then
     printf "\n\x1b[1mFlatpak packages to \x1b[31mremove\x1b[37m ($flatpak_level-wide): $flatpak_packages_to_remove\x1b[0m\n"
@@ -160,7 +174,7 @@ for remote in "${!flatpak_packages_to_install[@]}"; do
     if [[ -n "${flatpak_packages_to_install["$remote"]}" ]]; then
         packages="${flatpak_packages_to_install["$remote"]::-1}"
         printf "\n\x1b[1mFlatpak packages to install from remote $remote ($flatpak_level-wide): $packages\x1b[0m\n"
-        flatpak install --$flatpak_level "$remote" $packages
+        flatpak install $flatpak_install_args --$flatpak_level "$remote" $packages
     fi
 done
 

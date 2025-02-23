@@ -36,5 +36,6 @@ FLAGS:
 - `-h`: Print this message and exit
 - `-r`: Recursively remove dependencies of AUR packages to remove. Corresponding environment variable: `APF_REMOVE_DEPENDENCIES`
 - `-u`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
+- `-y`: Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: `APF_NO_CONFIRMATION`
 
 Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
