@@ -15,11 +15,6 @@ if [ -n "$APF_FLATPAK_USER" ]; then
 else
     flatpak_level="system"
 fi
-if [ -n "$APF_FLATPAK_USER" ]; then
-    flatpak_level="user"
-else
-    flatpak_level="system"
-fi
 if [ -n "$APF_NO_CONFIRMATION" ]; then
     aur_install_args="--noconfirm"
     flatpak_install_args="--assumeyes"
