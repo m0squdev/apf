@@ -108,9 +108,7 @@ choices=$(fzf $fzf_args --multi --no-sort --preview '
         if cat "'"$aur_repos"'" | grep -q "^$repo_or_remote$" && cat "'"$installed_aur_packages"'" | grep -q "^$package_or_id$" && [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
             printf " (also remove unused dependencies)"
         fi
-    done || {
-        printf "none"
-    }
+    done
 ' --bind 'start:reload(
     yay -Qq > "'"$installed_aur_packages"'"
     unformatted_aur_packages="$(yay -Pc)"
