@@ -79,7 +79,7 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview '
         else
             printf "\x1b[0m \n    Package not installed. Select to install.\n\n"
         fi
-        flatpak remote-info --system "$repo_or_remote" "$package_or_id"
+        flatpak remote-info --'$flatpak_level' "$repo_or_remote" "$package_or_id"
         printf "\n"
     else
         echo "\x1b[31mError: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
