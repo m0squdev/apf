@@ -125,53 +125,55 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview '
     echo "$flatpak_packages"
     echo "$aur_packages" | grep "^aur/"
 )')
-aur_packages_to_remove=""
-aur_packages_to_install=""
-flatpak_packages_to_remove=""
-declare -A flatpak_packages_to_install
-while read -r choice; do
-    full_package_name="${choice%% *}"
-    repo_or_remote="${full_package_name%%/*}"
-    package_or_id="${full_package_name#*/}"
-    if cat "$aur_repos" | grep -q "^$repo_or_remote$"; then
-        if cat "$installed_aur_packages" | grep -q "^$package_or_id$"; then
-            aur_packages_to_remove+="$package_or_id "
+if [ -n "$choices" ]; then
+    aur_packages_to_remove=""
+    aur_packages_to_install=""
+    flatpak_packages_to_remove=""
+    declare -A flatpak_packages_to_install
+    while read -r choice; do
+        full_package_name="${choice%% *}"
+        repo_or_remote="${full_package_name%%/*}"
+        package_or_id="${full_package_name#*/}"
+        if cat "$aur_repos" | grep -q "^$repo_or_remote$"; then
+            if cat "$installed_aur_packages" | grep -q "^$package_or_id$"; then
+                aur_packages_to_remove+="$package_or_id "
+            else
+                aur_packages_to_install+="$package_or_id "
+            fi
+        elif cat "$flatpak_remotes" | grep -q "^$repo_or_remote$"; then
+            if cat "$installed_flatpak_packages" | grep -q "^$repo_or_remote/$package_or_id$"; then
+                flatpak_packages_to_remove+="$package_or_id "
+            else
+                flatpak_packages_to_install["$repo_or_remote"]+="$package_or_id "
+            fi
         else
-            aur_packages_to_install+="$package_or_id "
+            printf "\x1b[31mError: source of package $full_package_name is neither a repo nor a Flatpak remote!\x1b[37m\n"
         fi
-    elif cat "$flatpak_remotes" | grep -q "^$repo_or_remote$"; then
-        if cat "$installed_flatpak_packages" | grep -q "^$repo_or_remote/$package_or_id$"; then
-            flatpak_packages_to_remove+="$package_or_id "
-        else
-            flatpak_packages_to_install["$repo_or_remote"]+="$package_or_id "
+    done <<< "$choices"
+    if [ -n "$aur_packages_to_remove" ]; then
+        printf "\x1b[1mOfficial and AUR packages to \x1b[31mremove\x1b[37m"
+        if [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
+            printf " (also remove unused dependencies)"
         fi
-    else
-        printf "\x1b[31mError: source of package $full_package_name is neither a repo nor a Flatpak remote!\x1b[37m\n"
+        printf ": $aur_packages_to_remove\x1b[0m\n"
+        yay -R $aur_remove_args ${aur_packages_to_remove::-1}
     fi
-done <<< "$choices"
-if [ -n "$aur_packages_to_remove" ]; then
-    printf "\x1b[1mOfficial and AUR packages to \x1b[31mremove\x1b[37m"
-    if [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
-        printf " (also remove unused dependencies)"
+    if [ -n "$aur_packages_to_install" ]; then
+        printf "\x1b[1mOfficial and AUR packages to install: $aur_packages_to_install\x1b[0m\n"
+        yay -S $aur_install_args ${aur_packages_to_install::-1}
     fi
-    printf ": $aur_packages_to_remove\x1b[0m\n"
-    yay -R $aur_remove_args ${aur_packages_to_remove::-1}
-fi
-if [ -n "$aur_packages_to_install" ]; then
-    printf "\x1b[1mOfficial and AUR packages to install: $aur_packages_to_install\x1b[0m\n"
-    yay -S $aur_install_args ${aur_packages_to_install::-1}
-fi
-if [ -n "$flatpak_packages_to_remove" ]; then
-    printf "\x1b[1mFlatpak packages to \x1b[31mremove\x1b[37m ($flatpak_level-wide): $flatpak_packages_to_remove\x1b[0m\n"
-    flatpak uninstall --$flatpak_level ${flatpak_packages_to_remove::-1}
-fi
-for remote in "${!flatpak_packages_to_install[@]}"; do
-    if [[ -n "${flatpak_packages_to_install["$remote"]}" ]]; then
-        packages="${flatpak_packages_to_install["$remote"]::-1}"
-        printf "\x1b[1mFlatpak packages to install from remote $remote ($flatpak_level-wide): $packages\x1b[0m\n"
-        flatpak install $flatpak_install_args --$flatpak_level "$remote" $packages
+    if [ -n "$flatpak_packages_to_remove" ]; then
+        printf "\x1b[1mFlatpak packages to \x1b[31mremove\x1b[37m ($flatpak_level-wide): $flatpak_packages_to_remove\x1b[0m\n"
+        flatpak uninstall --$flatpak_level ${flatpak_packages_to_remove::-1}
     fi
-done
+    for remote in "${!flatpak_packages_to_install[@]}"; do
+        if [[ -n "${flatpak_packages_to_install["$remote"]}" ]]; then
+            packages="${flatpak_packages_to_install["$remote"]::-1}"
+            printf "\x1b[1mFlatpak packages to install from remote $remote ($flatpak_level-wide): $packages\x1b[0m\n"
+            flatpak install $flatpak_install_args --$flatpak_level "$remote" $packages
+        fi
+    done
+fi
 
 rm "$installed_aur_packages" "$aur_repos" "$installed_flatpak_packages" "$flatpak_remotes"
 printf "\x1b[0m"
