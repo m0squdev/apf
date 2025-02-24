@@ -51,7 +51,7 @@ aur_repos="$(mktemp)"
 installed_flatpak_packages="$(mktemp)"
 flatpak_remotes="$(mktemp)"
 
-choices=$(fzf $fzf_args --multi --no-sort --preview '
+choices=$(fzf $fzf_args --multi --no-sort --reverse --preview '
 	choice="{1}"
 	choice="${choice:1:-1}"
     repo_or_remote="${choice%%/*}"
