@@ -120,7 +120,7 @@ choices=$(fzf $fzf_args --multi --no-sort --preview '
     flatpak list --columns=application,origin | awk '\''{print $2 "/" $1}'\'' > "'"$installed_flatpak_packages"'"
     flatpak remotes --columns=name > "'"$flatpak_remotes"'"
     flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '\''!seen[$0]++ {print $2 "/" $1}'\'')"  # This line also removes duplicate lines
-    echo "$flatpak_packages" | tac
+    echo "$flatpak_packages"
     echo "$aur_packages" | grep "^aur/"
 )')
 aur_packages_to_remove=""
