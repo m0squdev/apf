@@ -53,7 +53,7 @@ flatpak_remotes="$(mktemp)"
 
 choices=$(fzf $fzf_args --multi --no-sort --reverse --preview '
 	choice="{1}"
-	choice="${choice:1:-1}"
+    choice="${choice:1:-1}"
     repo_or_remote="${choice%%/*}"
     package_or_id="${choice#*/}"
     case "$repo_or_remote" in
@@ -75,11 +75,12 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview '
         yay -Si "$package_or_id"
     elif cat "'"$flatpak_remotes"'" | grep -q "^$repo_or_remote$"; then
         if cat "'"$installed_flatpak_packages"'" | grep -q "^$repo_or_remote/$package_or_id$"; then
-            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m\n    Package already installed. Select to remove.\n\n"
+            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m \n    Package already installed. Select to remove.\n\n"
         else
-            printf "\x1b[0m\n    Package not installed. Select to install.\n\n"
+            printf "\x1b[0m \n    Package not installed. Select to install.\n\n"
         fi
         flatpak remote-info --system "$repo_or_remote" "$package_or_id"
+        printf "\n"
     else
         echo "\x1b[31mError: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
     fi
@@ -108,6 +109,9 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview '
         if cat "'"$aur_repos"'" | grep -q "^$repo_or_remote$" && cat "'"$installed_aur_packages"'" | grep -q "^$package_or_id$" && [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
             printf " (also remove unused dependencies)"
         fi
+        if cat "'"$flatpak_remotes"'" | grep -q "^$repo_or_remote$"; then
+            printf " "
+        fi
     done
 ' --bind 'start:reload(
     yay -Qq > "'"$installed_aur_packages"'"
@@ -117,7 +121,7 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview '
     echo "$aur_packages" | grep -v "^aur/"
     flatpak list --columns=application,origin | awk '\''{print $2 "/" $1}'\'' > "'"$installed_flatpak_packages"'"
     flatpak remotes --columns=name > "'"$flatpak_remotes"'"
-    flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '\''!seen[$0]++ {print $2 "/" $1}'\'')"  # This line also removes duplicate lines
+    flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk '\''!seen[$0]++ {print $2 "/" $1 " "}'\'')"  # This line also removes duplicate lines
     echo "$flatpak_packages"
     echo "$aur_packages" | grep "^aur/"
 )')
