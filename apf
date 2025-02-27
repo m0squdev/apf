@@ -77,9 +77,9 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview 'bash -c '\''
         yay -Si "$package_or_id"
     elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
         if grep -q "^$repo_or_remote/$package_or_id$" "'"$installed_flatpak_packages"'"; then
-            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m \n    Package already installed. Select to remove.\n\n"
+            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m \n    Package already installed. Select to remove.\n"
         else
-            printf "\x1b[0m \n    Package not installed. Select to install.\n\n"
+            printf "\x1b[0m \n    Package not installed. Select to install.\n"
         fi
         flatpak remote-info --'$flatpak_level' "$repo_or_remote" "$package_or_id"
         printf "\n"
