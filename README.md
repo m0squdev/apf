@@ -38,5 +38,6 @@ FLAGS:
 - `-u`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
 - `-y`: Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: `APF_NO_CONFIRMATION`
 
-Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
-Press Ctrl-R to reload package list.
+In the fzf TUI:
+    Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
+    Press Ctrl-R to reload package list.

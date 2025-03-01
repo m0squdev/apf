@@ -26,8 +26,9 @@ FLAGS:
     -u    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
     -y    Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
 
-Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
-Press Ctrl-R to reload package list."
+In the fzf TUI:
+    Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
+    Press Ctrl-R to reload package list."
 
 while getopts 'fhiruy' option; do
     case "$option" in
@@ -107,16 +108,16 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview 'bash -c '\''
     yay -Qq > "'"$installed_aur_packages"'"
     unformatted_aur_packages="$(yay -Pc)"
     echo "$unformatted_aur_packages" | awk "{print tolower(\$2)}" | sort -u > "'"$aur_repos"'"
-    aur_packages="$(awk "NR==FNR {allowed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in allowed) printf \" (Installed)\"; print \"\"}" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
+    aur_packages="$(awk "NR==FNR {allowed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in allowed) printf \" (*)\"; print \"\"}" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
     if [ -n "'"$filter_installed"'" ]; then
-        aur_packages="$(echo "$aur_packages" | grep " (Installed)")"
+        aur_packages="$(echo "$aur_packages" | grep " (*)")"
     fi
     echo "$aur_packages" | grep -v "^aur/"
     echo "$(flatpak list --columns=application,origin)" | awk "{print \$2 \"/\" \$1}" > "'"$installed_flatpak_packages"'"
     flatpak remotes --columns=name > "'"$flatpak_remotes"'"
-    flatpak_packages="$(awk "NR==FNR {allowed[\$0]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (key in allowed) printf \" (Installed)\"; print \" \"}" "'"$installed_flatpak_packages"'" <(flatpak remote-ls --app --columns=application,origin))"
+    flatpak_packages="$(awk "NR==FNR {allowed[\$0]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (key in allowed) printf \" (*)\"; print \" \"}" "'"$installed_flatpak_packages"'" <(flatpak remote-ls --app --columns=application,origin))"
     if [ -n "'"$filter_installed"'" ]; then
-        flatpak_packages="$(echo "$flatpak_packages" | grep " (Installed)")"
+        flatpak_packages="$(echo "$flatpak_packages" | grep " (*)")"
     fi
     echo "$flatpak_packages"
     echo "$aur_packages" | grep "^aur/"
