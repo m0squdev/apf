@@ -1,14 +1,10 @@
 #!/bin/bash
 
-if [ -n "$APF_FUZZY_SEARCH" ]; then
-    fzf_args=""
-else
+if [ -z "$APF_FUZZY_SEARCH" ]; then
     fzf_args="--exact"
 fi
 if [ -n "$APF_REMOVE_DEPENDENCIES" ]; then
     aur_remove_args="--recursive"
-else
-    aur_remove_args=""
 fi
 if [ -n "$APF_FLATPAK_USER" ]; then
     flatpak_level="user"
@@ -18,26 +14,26 @@ fi
 if [ -n "$APF_NO_CONFIRMATION" ]; then
     aur_install_args="--noconfirm"
     flatpak_install_args="--assumeyes"
-else
-    aur_install_args=""
-    flatpak_install_args=""
 fi
-help="
-Usage: $0 [FLAGS]
+
+help="Usage: $0 [FLAGS]
 
 FLAGS:
     -f    Enable fuzzy search. Corresponding environment variable: APF_FUZZY_SEARCH
     -h    Print this message and exit
+    -i    Only show installed packages
     -r    Recursively remove dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
     -u    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
     -y    Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
 
 Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
-"
-while getopts 'fhruy' option; do
+Press Ctrl-R to reload package list."
+
+while getopts 'fhiruy' option; do
     case "$option" in
     	f) fzf_args="" ;;
         h) printf "$help\n"; exit 0 ;;
+        i) filter_installed=true ;;
         r) aur_remove_args="--recursive" ;;
         u) flatpak_level="user" ;;
         y) aur_install_args="--noconfirm"; flatpak_install_args="--assumeyes" ;;
@@ -91,15 +87,6 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview 'bash -c '\''
         selected_full_package_name="${selected_choice%% *}"
         repo_or_remote="${selected_full_package_name%%/*}"
         package_or_id="${selected_full_package_name#*/}"
-        case "$repo_or_remote" in
-            aur) repo_or_remote_color="\x1b[34m" ;;
-            core) repo_or_remote_color="\x1b[33m" ;;
-            extra) repo_or_remote_color="\x1b[32m" ;;
-            flathub) repo_or_remote_color="\x1b[35m" ;;
-            flathub-beta) repo_or_remote_color="\x1b[31m" ;;
-            multilib) repo_or_remote_color="\x1b[36m" ;;
-            *) repo_or_remote_color="" ;;
-        esac
         printf "\n    \x1b[1m$(get_repo_or_remote_color "$repo_or_remote")$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id\x1b[0m (to "
         if { grep -q "^$repo_or_remote$" "'"$aur_repos"'" && grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; } || \
             { grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'" && grep -q "^$repo_or_remote/$package_or_id$" "'"$installed_flatpak_packages"'"; }; then
@@ -116,22 +103,25 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --preview 'bash -c '\''
             printf " "
         fi
     done
-'\''' --bind 'start:reload(bash -c '\''
+'\''' --bind 'start,ctrl-r:reload(bash -c '\''
     yay -Qq > "'"$installed_aur_packages"'"
     unformatted_aur_packages="$(yay -Pc)"
     echo "$unformatted_aur_packages" | awk "{print tolower(\$2)}" | sort -u > "'"$aur_repos"'"
-    aur_packages="$(echo "$unformatted_aur_packages" | awk "{print tolower(\$2) \"/\" \$1}")"
+    aur_packages="$(awk "NR==FNR {allowed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in allowed) printf \" (Installed)\"; print \"\"}" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
+    if [ -n "'"$filter_installed"'" ]; then
+        aur_packages="$(echo "$aur_packages" | grep " (Installed)")"
+    fi
     echo "$aur_packages" | grep -v "^aur/"
-    flatpak list --columns=application,origin | awk "{print \$2 \"/\" \$1}" > "'"$installed_flatpak_packages"'"
+    echo "$(flatpak list --columns=application,origin)" | awk "{print \$2 \"/\" \$1}" > "'"$installed_flatpak_packages"'"
     flatpak remotes --columns=name > "'"$flatpak_remotes"'"
-    flatpak_packages="$(flatpak remote-ls --app --columns=application,origin | awk "!seen[\$0]++ {print \$2 \"/\" \$1 \" \"}")"
+    flatpak_packages="$(awk "NR==FNR {allowed[\$0]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (key in allowed) printf \" (Installed)\"; print \" \"}" "'"$installed_flatpak_packages"'" <(flatpak remote-ls --app --columns=application,origin))"
+    if [ -n "'"$filter_installed"'" ]; then
+        flatpak_packages="$(echo "$flatpak_packages" | grep " (Installed)")"
+    fi
     echo "$flatpak_packages"
     echo "$aur_packages" | grep "^aur/"
 '\'')')
 if [ -n "$choices" ]; then
-    aur_packages_to_remove=""
-    aur_packages_to_install=""
-    flatpak_packages_to_remove=""
     declare -A flatpak_packages_to_install
     while read -r choice; do
         full_package_name="${choice%% *}"
