@@ -31,17 +31,17 @@ Move it to `~/.local/bin` (user-wide installation) or `/usr/bin` (system-wide in
 Usage: `apf [OPTIONS] [INITIAL QUERY]`
 
 OPTIONS:
-    `-f`, `--fuzzy`: Enable fuzzy search. Corresponding environment variable: `APF_FUZZY_SEARCH`
-    `-h`, `--help`: Print this message and exit
-    `-i`, `--installed`: Only show installed packages
-    `-r`, `--recursive`: Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: `APF_REMOVE_DEPENDENCIES`
-    `-s`, `--flatpak-system`: Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable `APF_FLATPAK_USER`
-    `-u`, `--flatpak-user`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
-    `-y`, `--yes`: Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: `APF_NO_CONFIRMATION`
+- `-f`, `--fuzzy`: Enable fuzzy search. Corresponding environment variable: `APF_FUZZY_SEARCH`
+- `-h`, `--help`: Print this message and exit
+- `-i`, `--installed`: Only show installed packages
+- `-r`, `--recursive`: Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: `APF_REMOVE_DEPENDENCIES`
+- `-s`, `--flatpak-system`: Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable `APF_FLATPAK_USER`
+- `-u`, `--flatpak-user`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
+- `-y`, `--yes`: Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: `APF_NO_CONFIRMATION`
 
 INITIAL QUERY:
-    Specify this parameter to start fzf with an initial search query.
+- Specify this parameter to start fzf with an initial search query.
 
 In the fzf TUI:
-    Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
-    Press Ctrl-R to reload package list.
+- Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
+- Press Ctrl-R to reload package list.
