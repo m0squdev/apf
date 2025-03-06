@@ -16,30 +16,47 @@ if [ -n "$APF_NO_CONFIRMATION" ]; then
     flatpak_install_args="--assumeyes"
 fi
 
-help="Usage: $0 [FLAGS]
+program_name="$(basename "$0")"
+help="Usage: $program_name [OPTIONS] [INITIAL QUERY]
 
-FLAGS:
-    -f    Enable fuzzy search. Corresponding environment variable: APF_FUZZY_SEARCH
-    -h    Print this message and exit
-    -i    Only show installed packages
-    -r    Recursively remove dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
-    -u    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
-    -y    Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
+OPTIONS:
+    -f, --fuzzy           Enable fuzzy search. Corresponding environment variable: APF_FUZZY_SEARCH
+    -h, --help            Print this message and exit
+    -i, --installed       Only show installed packages
+    -r, --recursive       Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
+    -s, --flatpak-system  Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable APF_FLATPAK_USER
+    -u, --flatpak-user    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
+    -y, --yes             Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
+
+INITIAL QUERY:
+    Specify this parameter to start fzf with an initial search query.
 
 In the fzf TUI:
     Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
     Press Ctrl-R to reload package list."
 
-while getopts 'fhiruy' option; do
-    case "$option" in
-    	f) fzf_args="" ;;
-        h) printf "$help\n"; exit 0 ;;
-        i) filter_installed=true ;;
-        r) aur_remove_args="--recursive" ;;
-        u) flatpak_level="user" ;;
-        y) aur_install_args="--noconfirm"; flatpak_install_args="--assumeyes" ;;
-        ?) printf "$help\n"; exit 1 ;;
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    	-f | --fuzzy) fzf_args="" ;;
+        -h | --help)
+            printf "$help\n"
+            exit 0
+            ;;
+        -i | --installed) filter_installed=true ;;
+        -r | --recursive) aur_remove_args="--recursive" ;;
+        -s | --system) flatpak_level="system" ;;
+        -u | --user) flatpak_level="user" ;;
+        -y | --yes)
+            aur_install_args="--noconfirm"
+            flatpak_install_args="--assumeyes"
+            ;;
+        -*)
+            printf "$program_name: invalid argument '$1'\n$help\n"
+            exit 1
+            ;;
+        *) initial_query+=("$1") ;;
     esac
+    shift
 done
 
 installed_aur_packages="$(mktemp)"
@@ -47,7 +64,7 @@ aur_repos="$(mktemp)"
 installed_flatpak_packages="$(mktemp)"
 flatpak_remotes="$(mktemp)"
 
-choices=$(fzf $fzf_args --multi --no-sort --reverse --preview 'bash -c '\''
+choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}" --preview 'bash -c '\''
     get_repo_or_remote_color() {
         case "$1" in
             aur) color="34" ;;
