@@ -31,6 +31,7 @@ Move it to `~/.local/bin` (user-wide installation) or `/usr/bin` (system-wide in
 Usage: `apf [OPTIONS] [INITIAL QUERY]`
 
 OPTIONS:
+- `-a`, `--reinstall`: Reinstall already installed packages instead of deleting them. Corresponding environment variable: `APF_REINSTALL`
 - `-f`, `--fuzzy`: Enable fuzzy search. Corresponding environment variable: `APF_FUZZY_SEARCH`
 - `-h`, `--help`: Print this message and exit
 - `-i`, `--installed`: Only show installed packages
