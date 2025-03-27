@@ -218,7 +218,7 @@ if [ -n "$choices" ]; then
     fi
     if [ -n "$aur_packages_to_install" ]; then
         printf "\n"
-        log "Official and AUR packages to install: $aur_packages_to_install\n"
+        log "Official and AUR packages to install: \x1b[1m$aur_packages_to_install\x1b[0m\n"
         yay -S $aur_install_args ${aur_packages_to_install::-1}
         check_exit_code
     fi
@@ -232,7 +232,7 @@ if [ -n "$choices" ]; then
         if [[ -n "${flatpak_packages_to_install["$remote"]}" ]]; then
             packages="${flatpak_packages_to_install["$remote"]::-1}"
             printf "\n"
-            log "Flatpak packages to install from remote $remote ($flatpak_level-wide): $packages\n"
+            log "Flatpak packages to install from remote $remote ($flatpak_level-wide): \x1b[1m$packages\x1b[0m\n"
             flatpak install $flatpak_install_args --$flatpak_level "$remote" $packages
             check_exit_code
         fi
