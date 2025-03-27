@@ -11,8 +11,7 @@ check_exit_code() {
     exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
         printf "\n"
-        error "previous command exited with non-zero code $exit_code\n"
-        log "Continue transaction? (y/N) "
+        error "Previous command exited with non-zero code $exit_code. Continue transaction? (y/N) "
         read choice
         if [[ "$choice" != "y" && "$choice" != "Y" ]]; then
             exit 2
