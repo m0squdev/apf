@@ -19,12 +19,7 @@ It is basically a mix of yay (A)UR helper, (P)acman and (F)latpak!
 
 ## Installation
 
-Make the script executable:
-```bash
-chmod +x apf
-```
-
-Move it to `~/.local/bin` (user-wide installation) or `/usr/bin` (system-wide installation).
+Move the script to `~/.local/bin` (user-wide installation) or `/usr/bin` (system-wide installation).
 
 ## Usage
 
