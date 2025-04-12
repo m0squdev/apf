@@ -19,7 +19,7 @@ It is basically a mix of yay (A)UR helper, (P)acman and (F)latpak!
 
 ## Installation
 
-Move the script to `~/.local/bin` (user-wide installation) or `/usr/bin` (system-wide installation).
+Move the script to a directory in your PATH variable.
 
 ## Usage
 
