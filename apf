@@ -72,8 +72,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         -i | --installed) filter_installed=true ;;
         -r | --recursive) aur_remove_args="--recursive" ;;
-        -s | --system) flatpak_level="system" ;;
-        -u | --user) flatpak_level="user" ;;
+        -s | --flatpak-system) flatpak_level="system" ;;
+        -u | --flatpak-user) flatpak_level="user" ;;
         -y | --yes)
             aur_install_args="--noconfirm"
             flatpak_install_args+=" --assumeyes"
@@ -169,16 +169,16 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}
     yay -Qq > "'"$installed_aur_packages"'"
     unformatted_aur_packages="$(yay -Pc)"
     echo "$unformatted_aur_packages" | awk "{print tolower(\$2)}" | sort -u > "'"$aur_repos"'"
-    aur_packages="$(awk "NR==FNR {allowed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in allowed) printf \" (*)\"; print \"\"}" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
+    aur_packages="$(awk "NR==FNR {installed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in installed) printf \" (*)\"; print \"\"}" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
     if [ -n "'"$filter_installed"'" ]; then
         aur_packages="$(echo "$aur_packages" | grep " (\*)")"
     fi
     echo "$aur_packages" | grep -v "^aur/"
-    echo "$(flatpak list --columns=application,origin)" | awk "{print \$2 \"/\" \$1}" > "'"$installed_flatpak_packages"'"
+    echo "$(flatpak list --columns=application,origin,installation)" | awk "{print \$2 \"/\" \$1 \" \" \$3}" > "'"$installed_flatpak_packages"'"
     flatpak remotes --columns=name > "'"$flatpak_remotes"'"
-    flatpak_packages="$(awk "NR==FNR {allowed[\$0]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (key in allowed) printf \" (*)\"; print \" \"}" "'"$installed_flatpak_packages"'" <(flatpak remote-ls --app --columns=application,origin))"
+    flatpak_packages="$(awk "NR==FNR {split(\$0, parts); installed[parts[1]] = parts[2]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (installed[key]) printf \" (*%s)\", installed[key]; print \" \"}" "'"$installed_flatpak_packages"'" <(flatpak remote-ls --app --columns=application,origin))"
     if [ -n "'"$filter_installed"'" ]; then
-        flatpak_packages="$(echo "$flatpak_packages" | grep " (\*)")"
+        flatpak_packages="$(echo "$flatpak_packages" | grep -E "'" \(\*.*\)"'")"
     fi
     echo "$flatpak_packages"
     echo "$aur_packages" | grep "^aur/"
@@ -196,7 +196,7 @@ if [ -n "$choices" ]; then
                 aur_packages_to_install+="$package_or_id "
             fi
         elif grep -q "^$repo_or_remote$" "$flatpak_remotes"; then
-            if [ -z "$reinstall" ] && grep -q "^$repo_or_remote/$package_or_id$" "$installed_flatpak_packages"; then
+            if [ -z "$reinstall" ] && grep -q "^$repo_or_remote/$package_or_id " "$installed_flatpak_packages"; then
                 flatpak_packages_to_remove+="$package_or_id "
             else
                 flatpak_packages_to_install["$repo_or_remote"]+="$package_or_id "
@@ -223,6 +223,7 @@ if [ -n "$choices" ]; then
     fi
     if [ -n "$flatpak_packages_to_remove" ]; then
         printf "\n"
+
         log "Flatpak packages to \x1b[1m\x1b[31mremove\x1b[37m\x1b[0m ($flatpak_level-wide): \x1b[1m$flatpak_packages_to_remove\x1b[0m\n"
         flatpak uninstall --$flatpak_level ${flatpak_packages_to_remove::-1}
         check_exit_code
