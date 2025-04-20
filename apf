@@ -50,6 +50,7 @@ OPTIONS:
     -r, --recursive       Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
     -s, --flatpak-system  Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable APF_FLATPAK_USER
     -u, --flatpak-user    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
+    -w, --wait            Wait for user interaction to exit the program at the end of a transaction
     -y, --yes             Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
 
 INITIAL QUERY:
@@ -74,6 +75,7 @@ while [[ $# -gt 0 ]]; do
         -r | --recursive) aur_remove_args="--recursive" ;;
         -s | --flatpak-system) flatpak_level="system" ;;
         -u | --flatpak-user) flatpak_level="user" ;;
+        -w | --wait) wait_input=true ;;
         -y | --yes)
             aur_install_args="--noconfirm"
             flatpak_install_args+=" --assumeyes"
@@ -196,7 +198,7 @@ if [ -n "$choices" ]; then
                 aur_packages_to_install+="$package_or_id "
             fi
         elif grep -q "^$repo_or_remote$" "$flatpak_remotes"; then
-            if [ -z "$reinstall" ] && grep -q "^$repo_or_remote/$package_or_id " "$installed_flatpak_packages"; then
+            if [ -z "$reinstall" ] && grep -q "^$repo_or_remote/$package_or_id $flatpak_level$" "$installed_flatpak_packages"; then
                 flatpak_packages_to_remove+="$package_or_id "
             else
                 flatpak_packages_to_install["$repo_or_remote"]+="$package_or_id "
@@ -223,7 +225,6 @@ if [ -n "$choices" ]; then
     fi
     if [ -n "$flatpak_packages_to_remove" ]; then
         printf "\n"
-
         log "Flatpak packages to \x1b[1m\x1b[31mremove\x1b[37m\x1b[0m ($flatpak_level-wide): \x1b[1m$flatpak_packages_to_remove\x1b[0m\n"
         flatpak uninstall --$flatpak_level ${flatpak_packages_to_remove::-1}
         check_exit_code
@@ -237,6 +238,12 @@ if [ -n "$choices" ]; then
             check_exit_code
         fi
     done
+    if [ -n "$wait_input" ]; then
+        printf "\n"
+        log "Press Enter to exit program"
+        read -s
+        printf "\n"
+    fi
 fi
 
 rm "$installed_aur_packages" "$aur_repos" "$installed_flatpak_packages" "$flatpak_remotes"

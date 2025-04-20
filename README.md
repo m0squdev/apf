@@ -33,6 +33,7 @@ OPTIONS:
 - `-r`, `--recursive`: Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: `APF_REMOVE_DEPENDENCIES`
 - `-s`, `--flatpak-system`: Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable `APF_FLATPAK_USER`
 - `-u`, `--flatpak-user`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
+- `-w`, `--wait`: Wait for user interaction to exit the program at the end of a transaction
 - `-y`, `--yes`: Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: `APF_NO_CONFIRMATION`
 
 INITIAL QUERY:
