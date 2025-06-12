@@ -126,7 +126,7 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}
         printf ".\n\n"
         yay -Si "$package_or_id"
     elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
-        if grep -q "^$repo_or_remote/$package_or_id$" "'"$installed_flatpak_packages"'"; then
+        if grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; then
             printf " \x1b[32m(Installed)\x1b[37m\x1b[0m \n    Package already installed. Select to "
             if [ -n "'"$reinstall"'" ]; then
                 printf "reinstall"
@@ -149,7 +149,7 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}
         package_or_id="${selected_full_package_name#*/}"
         printf "\n    \x1b[1m$(get_repo_or_remote_color "$repo_or_remote")$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id\x1b[0m (to "
         if { grep -q "^$repo_or_remote$" "'"$aur_repos"'" && grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; } || \
-            { grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'" && grep -q "^$repo_or_remote/$package_or_id$" "'"$installed_flatpak_packages"'"; }; then
+            { grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'" && grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; }; then
             if [ -n "'"$reinstall"'" ]; then
                 printf "reinstall"
             else
