@@ -31,6 +31,7 @@ OPTIONS:
 - `-h`, `--help`: Print this message and exit
 - `-i`, `--installed`: Only show installed packages
 - `-r`, `--recursive`: Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: `APF_REMOVE_DEPENDENCIES`
+- `-R`, `--refresh-on-load`: Force refresh of AUR cached package list when loading package list (on start and when pressing Ctrl-R). Corresponding environment variable: `APF_REFRESH_ON_LOAD`
 - `-s`, `--flatpak-system`: Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable `APF_FLATPAK_USER`
 - `-u`, `--flatpak-user`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
 - `-w`, `--wait`: Wait for user interaction to exit the program at the end of a transaction

@@ -29,6 +29,9 @@ fi
 if [ -n "$APF_REMOVE_DEPENDENCIES" ]; then
     aur_remove_args="--recursive"
 fi
+if [ -n "$APF_REFRESH_ON_LOAD" ]; then
+    aur_refresh_on_load=true
+fi
 if [ -n "$APF_FLATPAK_USER" ]; then
     flatpak_level="user"
 else
@@ -43,15 +46,16 @@ program_name="$(basename "$0")"
 help="Usage: $program_name [OPTIONS] [INITIAL QUERY]
 
 OPTIONS:
-    -a, --reinstall       Reinstall already installed packages instead of deleting them. Corresponding environment variable: APF_REINSTALL
-    -f, --fuzzy           Enable fuzzy search. Corresponding environment variable: APF_FUZZY_SEARCH
-    -h, --help            Print this message and exit
-    -i, --installed       Only show installed packages
-    -r, --recursive       Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
-    -s, --flatpak-system  Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable APF_FLATPAK_USER
-    -u, --flatpak-user    Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
-    -w, --wait            Wait for user interaction to exit the program at the end of a transaction
-    -y, --yes             Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
+    -a, --reinstall        Reinstall already installed packages instead of deleting them. Corresponding environment variable: APF_REINSTALL
+    -f, --fuzzy            Enable fuzzy search. Corresponding environment variable: APF_FUZZY_SEARCH
+    -h, --help             Print this message and exit
+    -i, --installed        Only show installed packages
+    -r, --recursive        Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: APF_REMOVE_DEPENDENCIES
+    -R, --refresh-on-load  Force refresh of AUR cached package list when loading package list (on start and when pressing Ctrl-R). Corresponding environment variable: APF_REFRESH_ON_LOAD
+    -s, --flatpak-system   Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable APF_FLATPAK_USER
+    -u, --flatpak-user     Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
+    -w, --wait             Wait for user interaction to exit the program at the end of a transaction
+    -y, --yes              Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
 
 INITIAL QUERY:
     Specify this parameter to start fzf with an initial search query.
@@ -73,6 +77,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -i | --installed) filter_installed=true ;;
         -r | --recursive) aur_remove_args="--recursive" ;;
+        -R | --refresh-on-load) aur_refresh_on_load=true ;;
         -s | --flatpak-system) flatpak_level="system" ;;
         -u | --flatpak-user) flatpak_level="user" ;;
         -w | --wait) wait_input=true ;;
@@ -168,6 +173,9 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}
         fi
     done
 '\''' --bind 'start,ctrl-r:reload(bash -c '\''
+    if [ -n "'"$aur_refresh_on_load"'" ]; then
+        rm "$HOME/.cache/yay/completion.cache"
+    fi
     yay -Qq > "'"$installed_aur_packages"'"
     unformatted_aur_packages="$(yay -Pc)"
     echo "$unformatted_aur_packages" | awk "{print tolower(\$2)}" | sort -u > "'"$aur_repos"'"
