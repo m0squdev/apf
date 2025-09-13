@@ -19,6 +19,12 @@ check_exit_code() {
     fi
 }
 
+if [ -n "$DISPLAY" ]; then
+    sudo_command="pkexec"
+else
+    sudo_command="sudo"
+fi
+
 if [ -n "$APF_REINSTALL" ]; then
     reinstall=true
     flatpak_install_args+=" --reinstall"
@@ -43,6 +49,7 @@ if [ -n "$APF_NO_CONFIRMATION" ]; then
 fi
 
 program_name="$(basename "$0")"
+pid="$$"
 help="Usage: $program_name [OPTIONS] [INITIAL QUERY]
 
 OPTIONS:
@@ -95,9 +102,33 @@ while [[ $# -gt 0 ]]; do
 done
 
 installed_aur_packages="$(mktemp)"
+updatable_aur_packages="$(mktemp)"
 aur_repos="$(mktemp)"
 installed_flatpak_packages="$(mktemp)"
 flatpak_remotes="$(mktemp)"
+
+reload_function='
+    if [ -n "'"$aur_refresh_on_load"'" ]; then
+        rm "$HOME/.cache/yay/completion.cache"
+    fi
+    yay -Qq > "'"$installed_aur_packages"'"
+    yay -Qu > "'"$updatable_aur_packages"'"
+    unformatted_aur_packages="$(yay -Pc)"
+    echo "$unformatted_aur_packages" | awk "{print tolower(\$2)}" | sort -u > "'"$aur_repos"'"
+    aur_packages="$(awk "FILENAME==ARGV[1] {updatable[\$1]; next} FILENAME==ARGV[2] {installed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in updatable) printf \" (↑)\"; else if (\$1 in installed) printf \" (*)\"; print \"\"}" "'"$updatable_aur_packages"'" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
+    if [ -n "'"$filter_installed"'" ]; then
+        aur_packages="$(echo "$aur_packages" | grep " (\*)")"
+    fi
+    echo "$aur_packages" | grep -v "^aur/"
+    echo "$(flatpak list --columns=application,origin,installation)" | awk "{print \$2 \"/\" \$1 \" \" \$3}" > "'"$installed_flatpak_packages"'"
+    flatpak remotes --columns=name > "'"$flatpak_remotes"'"
+    flatpak_packages="$(awk "FILENAME==ARGV[1] {split(\$0, parts); installed[parts[1]] = parts[2]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (installed[key]) printf \" (%s)\", installed[key]; print \" \"}" "'"$installed_flatpak_packages"'" <(flatpak remote-ls --app --columns=application,origin))"
+    if [ -n "'"$filter_installed"'" ]; then
+        flatpak_packages="$(echo "$flatpak_packages" | grep -E "'" \(\*.*\)"'")"
+    fi
+    echo "$flatpak_packages"
+    echo "$aur_packages" | grep "^aur/"
+'
 
 choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}" --preview 'bash -c '\''
     get_repo_or_remote_color() {
@@ -119,7 +150,12 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}
     printf "\x1b[1m$(get_repo_or_remote_color "$repo_or_remote")$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id"
     if grep -q "^$repo_or_remote$" "'"$aur_repos"'"; then
         if grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; then
-            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m\n    Package already installed. Select to "
+            printf " \x1b[32m(Installed)"
+            updatable_entry="$(grep "^$package_or_id " "'"$updatable_aur_packages"'")"
+            if [ -n "$updatable_entry" ]; then
+                printf " (Updatable: $(awk "{printf substr(\$0, index(\$0, \$2))}" <(echo "$updatable_entry")))"
+            fi
+            printf "\x1b[37m\x1b[0m\n    Package already installed. Select to "
             if [ -n "'"$reinstall"'" ]; then
                 printf "reinstall"
             else
@@ -129,10 +165,10 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}
             printf "\x1b[0m\n    Package not installed. Select to install"
         fi
         printf ".\n\n"
-        yay -Si "$package_or_id"
+        yay -Si "$repo_or_remote/$package_or_id"
     elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
         if grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; then
-            printf " \x1b[32m(Installed)\x1b[37m\x1b[0m \n    Package already installed. Select to "
+            printf " \x1b[32m(Installed '$flatpak_level'-wide)\x1b[37m\x1b[0m \n    Package already installed. Select to "
             if [ -n "'"$reinstall"'" ]; then
                 printf "reinstall"
             else
@@ -173,25 +209,12 @@ choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_query[*]}
         fi
     done
 '\''' --bind 'start,ctrl-r:reload(bash -c '\''
-    if [ -n "'"$aur_refresh_on_load"'" ]; then
-        rm "$HOME/.cache/yay/completion.cache"
+    '"$reload_function"'
+'\'')' --bind 'ctrl-y:reload(bash -c '\''
+    if [ -n "$DISPLAY" ]; then
+        yay -Sy --sudo '"'$sudo_command'"' > /dev/null
     fi
-    yay -Qq > "'"$installed_aur_packages"'"
-    unformatted_aur_packages="$(yay -Pc)"
-    echo "$unformatted_aur_packages" | awk "{print tolower(\$2)}" | sort -u > "'"$aur_repos"'"
-    aur_packages="$(awk "NR==FNR {installed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in installed) printf \" (*)\"; print \"\"}" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
-    if [ -n "'"$filter_installed"'" ]; then
-        aur_packages="$(echo "$aur_packages" | grep " (\*)")"
-    fi
-    echo "$aur_packages" | grep -v "^aur/"
-    echo "$(flatpak list --columns=application,origin,installation)" | awk "{print \$2 \"/\" \$1 \" \" \$3}" > "'"$installed_flatpak_packages"'"
-    flatpak remotes --columns=name > "'"$flatpak_remotes"'"
-    flatpak_packages="$(awk "NR==FNR {split(\$0, parts); installed[parts[1]] = parts[2]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (installed[key]) printf \" (*%s)\", installed[key]; print \" \"}" "'"$installed_flatpak_packages"'" <(flatpak remote-ls --app --columns=application,origin))"
-    if [ -n "'"$filter_installed"'" ]; then
-        flatpak_packages="$(echo "$flatpak_packages" | grep -E "'" \(\*.*\)"'")"
-    fi
-    echo "$flatpak_packages"
-    echo "$aur_packages" | grep "^aur/"
+    '"$reload_function"'
 '\'')')
 if [ -n "$choices" ]; then
     declare -A flatpak_packages_to_install
@@ -203,7 +226,7 @@ if [ -n "$choices" ]; then
             if [ -z "$reinstall" ] && grep -q "^$package_or_id$" "$installed_aur_packages"; then
                 aur_packages_to_remove+="$package_or_id "
             else
-                aur_packages_to_install+="$package_or_id "
+                aur_packages_to_install+="$repo_or_remote/$package_or_id "
             fi
         elif grep -q "^$repo_or_remote$" "$flatpak_remotes"; then
             if [ -z "$reinstall" ] && grep -q "^$repo_or_remote/$package_or_id $flatpak_level$" "$installed_flatpak_packages"; then
@@ -222,13 +245,13 @@ if [ -n "$choices" ]; then
             printf " (also remove unused dependencies)"
         fi
         printf ": \x1b[1m$aur_packages_to_remove\x1b[0m\n"
-        yay -R $aur_remove_args ${aur_packages_to_remove::-1}
+        yay -R $aur_remove_args ${aur_packages_to_remove::-1} --sudo "$sudo_command"
         check_exit_code
     fi
     if [ -n "$aur_packages_to_install" ]; then
         printf "\n"
         log "Official and AUR packages to install: \x1b[1m$aur_packages_to_install\x1b[0m\n"
-        yay -S $aur_install_args ${aur_packages_to_install::-1}
+        yay -S $aur_install_args ${aur_packages_to_install::-1} --sudo "$sudo_command"
         check_exit_code
     fi
     if [ -n "$flatpak_packages_to_remove" ]; then
