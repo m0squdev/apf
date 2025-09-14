@@ -23,23 +23,7 @@ Move the script to a directory in your PATH variable.
 
 ## Usage
 
-Usage: `apf [OPTIONS] [INITIAL QUERY]`
-
-OPTIONS:
-- `-a`, `--reinstall`: Reinstall already installed packages instead of deleting them. Corresponding environment variable: `APF_REINSTALL`
-- `-f`, `--fuzzy`: Enable fuzzy search. Corresponding environment variable: `APF_FUZZY_SEARCH`
-- `-h`, `--help`: Print this message and exit
-- `-i`, `--installed`: Only show installed packages
-- `-r`, `--recursive`: Recursively remove unused and not explicitely installed dependencies of AUR packages to remove. Corresponding environment variable: `APF_REMOVE_DEPENDENCIES`
-- `-R`, `--refresh-on-load`: Force refresh of AUR cached package list when loading package list (on start and when pressing Ctrl-R). Corresponding environment variable: `APF_REFRESH_ON_LOAD`
-- `-s`, `--flatpak-system`: Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable `APF_FLATPAK_USER`
-- `-u`, `--flatpak-user`: Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: `APF_FLATPAK_USER`
-- `-w`, `--wait`: Wait for user interaction to exit the program at the end of a transaction
-- `-y`, `--yes`: Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: `APF_NO_CONFIRMATION`
-
-INITIAL QUERY:
-- Specify this parameter to start fzf with an initial search query.
-
-In the fzf TUI:
-- Press Tab to select multiple packages and press Enter to confirm your selection. Already installed packages will be removed and new packages will be installed.
-- Press Ctrl-R to reload package list.
+The interface is composed of:
+- A package manager to install, remove, and reinstall packages. You can also view details of that package and whether it is installed (and updatable if on AUR).
+- A command selector to update your system.
+The interface supports multi-selection.
