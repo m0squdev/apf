@@ -126,29 +126,14 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
                     if [ -n "$updatable_entry" ]; then
                         printf " (Updatable: $(awk "{printf substr(\$0, index(\$0, \$2))}" <(echo "$updatable_entry")))"
                     fi
-                    printf "\x1b[37m\x1b[0m\n    Package already installed. Select to "
-                    if [ -n "'"$reinstall"'" ]; then
-                        printf "reinstall"
-                    else
-                        printf "remove"
-                    fi
-                else
-                    printf "\x1b[0m\n    Package not installed. Select to install"
                 fi
-                printf ".\n\n"
+                printf "\x1b[0m\n\n"
                 yay -Si "$repo_or_remote/$package_or_id"
             elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
                 if grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; then
-                    printf " \x1b[32m(Installed '$flatpak_level'-wide)\x1b[37m\x1b[0m \n    Package already installed. Select to "
-                    if [ -n "'"$reinstall"'" ]; then
-                        printf "reinstall"
-                    else
-                        printf "remove"
-                    fi
-                else
-                    printf "\x1b[0m \n    Package not installed. Select to install"
+                    printf " \x1b[32m(Installed '$flatpak_level'-wide)\x1b[37m\x1b[0m "
                 fi
-                printf ".\n"
+                printf "\x1b[0m\n"
                 flatpak remote-info --'$flatpak_level' "$repo_or_remote" "$package_or_id"
                 printf "\n"
             else
@@ -180,8 +165,8 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
                 fi
             done
         fi
-    '\''' --bind 'start,ctrl-m:change-prompt(> )+change-preview-window()+change-footer(<Enter> Execute transaction   <Ctrl-S> Reinstall selection
-<Alt-I> Show installed        <Ctrl-E> Execute update
+    '\''' --bind 'start,ctrl-p:change-prompt(> )+change-preview-window()+change-footer(<Enter> Execute transaction   <Ctrl-S> Reinstall
+<Alt-I> Show installed        <Ctrl-E> Run update
 <Alt-U> Show updatable (yay)  <Tab> Multi-select)+first+reload(bash -c '\''
         if [ -n "'"$aur_refresh_on_load"'" ]; then
             rm "$HOME/.cache/yay/completion.cache"
@@ -203,13 +188,13 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         fi
         echo "$flatpak_packages"
         echo "$aur_packages" | grep "^aur/"
-    '\'')' --bind 'ctrl-e:change-prompt(Select commands > )+change-preview-window(bottom,70%)+change-footer(<Enter> Execute commands  <Ctrl-M> Package manager  <Tab> Multi-select  <Alt-A> Toggle all)+first+reload(
+    '\'')' --bind 'ctrl-e:change-prompt(Select commands > )+change-preview-window(bottom,70%)+change-footer(<Enter> Execute commands  <Ctrl-P> Package manager  <Tab> Multi-select  <Alt-A> Toggle all)+first+reload(
         echo "Execute yay -Sy\nExecute yay -Su\nExecute flatpak update --system\nExecute flatpak update --user"
     )' --bind 'alt-i:transform-query(
         echo "(*) | (↑) | ('"$flatpak_level"') "{q}
     )' --bind 'alt-u:transform-query(
         echo "(↑) "{q}
-    )' --bind 'ctrl-s:print(:reinstall)+accept-non-empty' --bind 'alt-a:toggle-all' --bind 'enter:accept-non-empty'
+    )' --bind 'ctrl-s:print(:reinstall)+accept-non-empty' --bind 'alt-a:toggle-all' --bind 'double-click,enter:accept-non-empty'
     ); do
 
     if [ -n "$choices" ]; then
