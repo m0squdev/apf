@@ -37,6 +37,9 @@ if [ -n "$APF_FLATPAK_USER" ]; then
 else
     flatpak_level="system"
 fi
+if [ -n "$APF_WAIT_INTERACTION" ]; then
+    wait_input=true
+fi
 if [ -n "$APF_NO_CONFIRMATION" ]; then
     aur_install_args="--noconfirm"
     flatpak_install_args+=" --assumeyes"
@@ -55,7 +58,7 @@ OPTIONS:
     -R, --refresh-on-load  Force refresh of AUR cached package list when loading package list (on start and when pressing Ctrl-R). Corresponding environment variable: APF_REFRESH_ON_LOAD
     -s, --flatpak-system   Install Flatpak packages system-wide. Default option, only to be used when overwritten by the environment variable APF_FLATPAK_USER
     -u, --flatpak-user     Install Flatpak packages user-wide instead of system-wide. Corresponding environment variable: APF_FLATPAK_USER
-    -w, --wait             Wait for user interaction to exit the program at the end of a transaction
+    -w, --wait             Wait for user interaction to return to the package manager at the end of a command execution
     -y, --yes              Don't prompt for confirmation when installing packages. You will still be prompted when removing packages. Corresponding environment variable: APF_NO_CONFIRMATION
 
 INITIAL QUERY:
@@ -235,8 +238,6 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
                 $update_command
                 printf "\n"
             done
-            log "Press Enter to return to package manager"
-            read -s
         fi
         if [ -n "$aur_packages_to_remove" ]; then
             printf "\n"
@@ -271,7 +272,7 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         done
         if [ -n "$wait_input" ]; then
             printf "\n"
-            log "Press Enter to exit program"
+            log "Press Enter to return to package manager"
             read -s
             printf "\n"
         fi
