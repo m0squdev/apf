@@ -205,7 +205,8 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         aur_packages_to_remove=""
         aur_packages_to_install=""
         flatpak_packages_to_remove=""
-        declare -A flatpak_packages_to_install
+        unset flatpak_packages_to_install
+	declare -A flatpak_packages_to_install
         if echo "$choices" | grep -q "^:reinstall$"; then
             reinstall_once=true
             choices="${choices#*$'\n'}"
