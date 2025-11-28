@@ -130,15 +130,20 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
                         if [ -n "$updatable_entry" ]; then
                             printf " (Updatable: $(awk "{printf substr(\$0, index(\$0, \$2))}" <(echo "$updatable_entry")))"
                         fi
+                        printf "\x1b[0m\n\n"
+                        yay -Qi "$package_or_id"
+                    else
+                        printf "\x1b[0m\n\n"
+                        yay -Si "$repo_or_remote/$package_or_id"
                     fi
-                    printf "\x1b[0m\n\n"
-                    yay -Si "$repo_or_remote/$package_or_id"
                 elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
                     if grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; then
-                        printf " \x1b[32m(Installed '$flatpak_level'-wide)\x1b[37m\x1b[0m "
+                        printf " \x1b[32m(Installed '$flatpak_level'-wide)\x1b[37m\x1b[0m \n"
+                        flatpak info --'$flatpak_level' "$package_or_id"
+                    else
+                        printf "\x1b[0m\n"
+                        flatpak remote-info --'$flatpak_level' "$repo_or_remote" "$package_or_id"
                     fi
-                    printf "\x1b[0m\n"
-                    flatpak remote-info --'$flatpak_level' "$repo_or_remote" "$package_or_id"
                     printf "\n"
                 else
                     echo "\x1b[31mError: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
@@ -195,7 +200,7 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         else
             unformatted_flatpak_packages="$(<"'"$flatpak_packages_file"'")"
         fi
-        flatpak_packages="$(awk "FILENAME==ARGV[1] {split(\$0, parts); installed[parts[1]] = parts[2]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (installed[key]) printf \" (%s)\", installed[key]; print \" \"}" "'"$installed_flatpak_packages"'" "'"$flatpak_packages_file"'") | sort"
+        flatpak_packages="$(awk "FILENAME==ARGV[1] {split(\$0, parts); installed[parts[1]] = parts[2]; next} !seen[\$2 \"/\" \$1]++ {key = \$2 \"/\" \$1; printf key; if (installed[key]) printf \" (%s)\", installed[key]; print \" \"}" "'"$installed_flatpak_packages"'" "'"$flatpak_packages_file"'" | sed "s|/|\\x01|g" | LC_COLLATE=C sort | sed "s|\\x01|/|g")"
         if [ -n "'"$filter_installed"'" ]; then
             flatpak_packages="$(echo "$flatpak_packages" | grep -E "'" \(\*.*\)"'")"
         fi
