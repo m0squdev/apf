@@ -115,69 +115,37 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         }
 
         choice="{1}"
-        if [[ "$choice" == "Execute" ]]; then
-            program='\''{2}'\''
-            man "$program" 2> /dev/null
-        else
-            if [ -n "$choice" ]; then
-                repo_or_remote="${choice%%/*}"
-                package_or_id="${choice#*/}"
-                printf "\x1b[1m$(get_repo_or_remote_color "$repo_or_remote")$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id"
-                if grep -q "^$repo_or_remote$" "'"$aur_repos"'"; then
-                    if grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; then
-                        printf " \x1b[32m(Installed)"
-                        updatable_entry="$(grep "^$package_or_id " "'"$updatable_aur_packages"'")"
-                        if [ -n "$updatable_entry" ]; then
-                            printf " (Updatable: $(awk "{printf substr(\$0, index(\$0, \$2))}" <(echo "$updatable_entry")))"
-                        fi
-                        printf "\x1b[0m\n\n"
-                        yay -Qi "$package_or_id"
-                    else
-                        printf "\x1b[0m\n\n"
-                        yay -Si "$repo_or_remote/$package_or_id"
+        if [ -n "$choice" ]; then
+            repo_or_remote="${choice%%/*}"
+            package_or_id="${choice#*/}"
+            printf "\x1b[1m$(get_repo_or_remote_color "$repo_or_remote")$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id"
+            if grep -q "^$repo_or_remote$" "'"$aur_repos"'"; then
+                if grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; then
+                    printf " \x1b[32m(Installed)"
+                    updatable_entry="$(grep "^$package_or_id " "'"$updatable_aur_packages"'")"
+                    if [ -n "$updatable_entry" ]; then
+                        printf " (Updatable: $(awk "{printf substr(\$0, index(\$0, \$2))}" <(echo "$updatable_entry")))"
                     fi
-                elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
-                    if grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; then
-                        printf " \x1b[32m(Installed '$flatpak_level'-wide)\x1b[37m\x1b[0m \n"
-                        flatpak info --'$flatpak_level' "$package_or_id"
-                    else
-                        printf "\x1b[0m\n"
-                        flatpak remote-info --'$flatpak_level' "$repo_or_remote" "$package_or_id"
-                    fi
-                    printf "\n"
+                    printf "\x1b[0m\n\n\x1b[1mLocal information\x1b[0m\n"
+                    yay -Qi "$package_or_id"
                 else
-                    echo "\x1b[31mError: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
+                    printf "\x1b[0m\n\n\x1b[1mRemote information\x1b[0m\n"
+                    yay -Si "$repo_or_remote/$package_or_id"
                 fi
+            elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
+                if grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; then
+                    printf " \x1b[32m(Installed '$flatpak_level'-wide)\x1b[37m\x1b[0m \n"
+                    flatpak info --'$flatpak_level' "$package_or_id"
+                else
+                    printf "\x1b[0m\n"
+                    flatpak remote-info --'$flatpak_level' "$repo_or_remote" "$package_or_id"
+                fi
+                printf "\n"
+            else
+                printf "\n\n\x1b[31mError: source of package $choice is neither a repo nor a Flatpak remote!\x1b[37m"
             fi
-            printf "Selected packages:"
-            cat "{+f}" | while read -r selected_choice; do
-                selected_full_package_name="${selected_choice%% *}"
-                repo_or_remote="${selected_full_package_name%%/*}"
-                package_or_id="${selected_full_package_name#*/}"
-                printf "\n    \x1b[1m$(get_repo_or_remote_color "$repo_or_remote")$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id\x1b[0m (to "
-                if { grep -q "^$repo_or_remote$" "'"$aur_repos"'" && grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; } || \
-                    { grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'" && grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; }; then
-                    if [ -n "'"$reinstall"'" ]; then
-                        printf "reinstall"
-                    else
-                        printf "\x1b[1m\x1b[31mremove\x1b[37m\x1b[0m"
-                    fi
-                else
-                    printf "install"
-                fi
-                printf ")"
-                if grep -q "^$repo_or_remote$" "'"$aur_repos"'"; then
-                    if [ -z "'"$reinstall"'" ] && grep -q "^$package_or_id$" "'"$installed_aur_packages"'" && [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
-                        printf " (also remove unused dependencies)"
-                    fi
-                elif grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
-                    printf " "
-                fi
-            done
         fi
-    '\''' --bind 'start,ctrl-p:change-prompt(> )+change-preview-window()+change-footer(<Enter> Execute transaction   <Ctrl-S> Reinstall
-<Alt-I> Show installed        <Ctrl-E> Run update
-<Alt-U> Show updatable (yay)  <Tab> Multi-select)+first+reload(bash -c '\''
+    '\''' --bind 'start,ctrl-p:change-prompt(> )+show-preview+first+reload(bash -c '\''
         yay -Qq > "'"$installed_aur_packages"'"
         yay -Qu > "'"$updatable_aur_packages"'"
         official_only_packages="$(pacman -Sl | awk "{print \$2 \" \" \$1}")"
@@ -206,13 +174,47 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         fi
         echo "$flatpak_packages"
         echo "$aur_packages" | grep "^aur/"
-    '\'')' --bind 'ctrl-e:change-prompt(Select commands > )+change-preview-window(bottom,65%)+change-footer(<Enter> Execute commands  <Ctrl-P> Package manager  <Tab> Multi-select  <Alt-A> Toggle all)+first+reload(
+    '\'')' --bind 'load,focus,multi:change-footer-label(Press <Ctrl-H> to view shortcuts)+transform-footer(bash -c '\''
+        if ! grep -q "^Execute" "{+f}"; then
+            cat "{+f}" | while read -r selected_choice; do
+                selected_full_package_name="${selected_choice%% *}"
+                repo_or_remote="${selected_full_package_name%%/*}"
+                package_or_id="${selected_full_package_name#*/}"
+                if { grep -q "^$repo_or_remote$" "'"$aur_repos"'" && grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; } || \
+                    { grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'" && grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; }; then
+                    if [ -n "'"$reinstall"'" ]; then
+                        printf "reinstall"
+                    else
+                        printf "\x1b[1m\x1b[31mremove\x1b[37m\x1b[0m"
+                        if [ -z "'"$reinstall"'" ] && grep -q "^$package_or_id$" "'"$installed_aur_packages"'" && [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
+                            printf " (also unused deps)"
+                        fi
+                    fi
+                else
+                    printf "install"
+                fi
+                printf ": \x1b[1m$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id\x1b[0m"
+                if grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
+                    printf " "
+                fi
+                printf "\n"
+            done
+        else
+            printf "\n"
+        fi
+    '\'')' --bind 'ctrl-h:change-footer-label(Change focus to hide)+transform-footer(bash -c '\''
+        if grep -q "^Execute" "{+f}"; then
+            printf "<Enter> Execute commands  <Ctrl-P> Package manager  <Tab> Multi-select  <Alt-A> Toggle all"
+        else
+            printf "<Enter> Execute transaction   <Ctrl-S> Reinstall\n<Alt-I> Show installed        <Ctrl-E> Run update\n<Alt-U> Show updatable (yay)  <Tab> Multi-select"
+        fi
+    '\'')' --bind 'ctrl-e:change-prompt(Select commands > )+hide-preview+first+reload(
         echo "Execute yay -Sy\nExecute yay -Su\nExecute flatpak update --system\nExecute flatpak update --user\nExecute pacman -Sy\nExecute pacman -Su"
     )' --bind 'alt-i:transform-query(
         echo "(*) | (↑) | ('"$flatpak_level"') "{q}
     )' --bind 'alt-u:transform-query(
         echo "(↑) "{q}
-    )' --bind 'ctrl-s:print(:reinstall)+accept-non-empty' --bind 'alt-a:toggle-all' --bind 'double-click,enter:accept-non-empty'
+    )' --bind 'ctrl-s:print(:reinstall)+accept-non-empty' --bind 'alt-a:toggle-all' --bind 'double-click,enter:accept-non-empty' --bind 'change:first'
     ); do
 
     if [ -n "$choices" ]; then
