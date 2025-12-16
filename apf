@@ -209,7 +209,7 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
             printf "<Enter> Execute transaction   <Ctrl-S> Reinstall\n<Alt-I> Show installed        <Ctrl-E> Run update\n<Alt-U> Show updatable (yay)  <Tab> Multi-select"
         fi
     '\'')' --bind 'ctrl-e:change-prompt(Select commands > )+hide-preview+first+reload(
-        echo "Execute yay -Sy\nExecute yay -Su\nExecute flatpak update --system\nExecute flatpak update --user\nExecute pacman -Sy\nExecute pacman -Su"
+        echo "Execute yay -Sy\nExecute yay -Su\nExecute flatpak update --system\nExecute flatpak update --user\nExecute sudo pacman -Sy\nExecute sudo pacman -Su"
     )' --bind 'alt-i:transform-query(
         echo "(*) | (↑) | ('"$flatpak_level"') "{q}
     )' --bind 'alt-u:transform-query(
