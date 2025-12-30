@@ -115,7 +115,7 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         }
 
         choice="{1}"
-        if [ -n "$choice" ]; then
+        if [ -n "$choice" ] && ! echo "$choice" | grep -q "^Execute"; then
             repo_or_remote="${choice%%/*}"
             package_or_id="${choice#*/}"
             printf "\x1b[1m$(get_repo_or_remote_color "$repo_or_remote")$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id"
@@ -175,32 +175,36 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
         echo "$flatpak_packages"
         echo "$aur_packages" | grep "^aur/"
     '\'')' --bind 'load,focus,multi:change-footer-label(Press <Ctrl-H> to view shortcuts)+transform-footer(bash -c '\''
-        if ! grep -q "^Execute" "{+f}"; then
-            cat "{+f}" | while read -r selected_choice; do
-                selected_full_package_name="${selected_choice%% *}"
-                repo_or_remote="${selected_full_package_name%%/*}"
-                package_or_id="${selected_full_package_name#*/}"
-                if { grep -q "^$repo_or_remote$" "'"$aur_repos"'" && grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; } || \
-                    { grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'" && grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; }; then
-                    if [ -n "'"$reinstall"'" ]; then
-                        printf "reinstall"
-                    else
-                        printf "\x1b[1m\x1b[31mremove\x1b[37m\x1b[0m"
-                        if [ -z "'"$reinstall"'" ] && grep -q "^$package_or_id$" "'"$installed_aur_packages"'" && [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
-                            printf " (also unused deps)"
-                        fi
-                    fi
-                else
-                    printf "install"
-                fi
-                printf ": \x1b[1m$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id\x1b[0m"
-                if grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
-                    printf " "
-                fi
-                printf "\n"
-            done
-        else
+        if grep -q "^Execute" "{+f}"; then
             printf "\n"
+        else
+            cat "{+f}" | while read -r selected_choice; do
+                if [ -z "$selected_choice" ]; then
+                    printf "\n"
+                else
+                    selected_full_package_name="${selected_choice%% *}"
+                    repo_or_remote="${selected_full_package_name%%/*}"
+                    package_or_id="${selected_full_package_name#*/}"
+                    if { grep -q "^$repo_or_remote$" "'"$aur_repos"'" && grep -q "^$package_or_id$" "'"$installed_aur_packages"'"; } || \
+                        { grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'" && grep -q "^$repo_or_remote/$package_or_id '$flatpak_level'$" "'"$installed_flatpak_packages"'"; }; then
+                        if [ -n "'"$reinstall"'" ]; then
+                            printf "reinstall"
+                        else
+                            printf "\x1b[1m\x1b[31mremove\x1b[37m\x1b[0m"
+                            if [ -z "'"$reinstall"'" ] && grep -q "^$package_or_id$" "'"$installed_aur_packages"'" && [[ "'"$aur_remove_args"'" == *"--recursive"* ]]; then
+                                printf " (also unused deps)"
+                            fi
+                        fi
+                    else
+                        printf "install"
+                    fi
+                    printf ": \x1b[1m$repo_or_remote\x1b[37m\x1b[0m/\x1b[1m$package_or_id\x1b[0m"
+                    if grep -q "^$repo_or_remote$" "'"$flatpak_remotes"'"; then
+                        printf " "
+                    fi
+                    printf "\n"
+                fi
+            done
         fi
     '\'')' --bind 'ctrl-h:change-footer-label(Change focus to hide)+transform-footer(bash -c '\''
         if grep -q "^Execute" "{+f}"; then
