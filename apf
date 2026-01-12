@@ -153,7 +153,7 @@ while choices=$(fzf $fzf_args --multi --no-sort --reverse --query "${initial_que
             gzip -cd "'"$aur_only_packages_gz"'" | awk "{print \$1 \" aur\"}" > "'"$aur_only_packages_file"'"
         fi
         aur_only_packages="$(<"'"$aur_only_packages_file"'")"
-        unformatted_aur_packages="$official_only_packages\n$aur_only_packages"
+        printf -v unformatted_aur_packages "%s\n%s" "$official_only_packages" "$aur_only_packages"
         echo "$unformatted_aur_packages" | awk "{print tolower(\$2)}" | sort -u > "'"$aur_repos"'"
         aur_packages="$(awk "FILENAME==ARGV[1] {updatable[\$1]; next} FILENAME==ARGV[2] {installed[\$0]; next} {printf tolower(\$2) \"/\" \$1; if (\$1 in updatable) printf \" (↑)\"; else if (\$1 in installed) printf \" (*)\"; print \"\"}" "'"$updatable_aur_packages"'" "'"$installed_aur_packages"'" <(echo "$unformatted_aur_packages"))"
         if [ -n "'"$filter_installed"'" ]; then
